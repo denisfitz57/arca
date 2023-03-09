@@ -1,0 +1,26 @@
+// Chopin's A minor prelude (exact)
+
+Scale = Scale(E F# G A B C D)
+Figuration = Chord([E2 B2] [CN1-1 G3] [B2 E2] [G2 G3], container = Scale)
+Melody = Arpeggiation(E4 CN0-5 CS1+1 - N5+1 N6+1 N2+0 CN6-5 CS7+1 - - - R, 
+	durations = 7 1 8 3 .25 .75 3 1 2 1.5 .5 8 4, chain, chord = Figuration)
+
+Figuration2 = Arpeggiation([E2 B2] [CN1-1 CS1+2] [B2 E2] [G2 CS1+2], chord = Figuration)
+DEF1 = Macro({Cadence = Arpeggiation([G2 D3] [N1+1 G3] [G2 D3] [CN5+1 G3], chord = Figuration)})
+DEF2 = Macro({End = Arpeggiation([PE2 C3] [CN1-1 CS1+2] [PE2 C3] [A2 CS1+2], chord = Figuration)})
+FinalChord = Arpeggiation([E3 G#3 B3], durations = 2)
+
+ScaleStream: @56 T7t-4 @80 newscale(12) @113 newscale(C D E F G A B)
+
+FigurationStream: {X = Macro(!! t-1T2 !! L1 ! L*t-1T2 !)} !!!! X t-2T3 
+	DEF1 Cadence: +G1 -D3 !!!! Figuration: t2T2 X voicelead(E: -1) addnote(F#3) !!! 
+	voicelead(C#: -1) ! voiceexchange(F#, A) Figuration2: !!! 
+	*voicelead(F#: -1, C: -1) ! *voicelead(B: 1, D#: 1)t-1 Figuration: 
+	!!!! T-2 @+12 t1 DEF2 End: !! *T-2t2 @+16 
+	FinalChord: +E2 ! *t1T-5 +(B1 B2) ! changedurations(0 4) *t-1T5 
+	+(E2 B2) ! +(E1 E2 D3 E3 G#3, length = 4) changedurations(0 8) +(A1 E2) *K2T-4 !
+
+MelodyStream: @16 ! changedurations(0 3) @+4 ! @+10 changedurations(0 13) ! [3:11]! 
+	@+8 +B3(length = 3) +C4(length = 1)
+
+//TODO:	rewrite object definitions in a more intuitive way using @

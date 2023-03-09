@@ -1,0 +1,22 @@
+// Grieg's Vision Op. 62 no. 5
+
+TimeSignature = 6/8; Tempo = 45; Spelling = Sharps
+theScale = Scale(A B C# D E F# G#)
+
+lh = Chord([A2 E3] F#3 C#4 E3 F#3 C#4, container = theScale)
+lh2 = Arpeggiation([A2 E3] A3 C#4 E3 A3 C#4, chord = lh)
+
+m1 = Arpeggiation(F#4 N0+1 A4 C#5 F#4 N0+1 A4 E5 C#5 A4 N0+1 - F#4, durations = 1 1 1 3 1 1 1 4.5 1.5 1.5 1.5 1.5 4.5, chord = lh)
+m2 = Chord(F#4 G#4 A4 C#5 F#4 G#4 A4 E5 D5 C#5 A4 F#4, durations = 1 1 1 3 1 1 1 4.5 1.5 1.5 1.5 6, container = theScale)
+
+m3 = Chord(E4 - -, durations = 6 3 3, container = theScale)
+
+theScaleStream: @m6 T4t-2 @m10 T-7t4 @m14 T-6t3 @m20 T-3t2 @m23 T3t-2 @m24 T-3t2
+
+lhStream: !!!!! T-2t1L1 !!!! T-2t1 !!!! T-1t1L1 !!!! t-2T2 !! T-4t2 lh2: ! *T-2 ! *T2 ! *T-2 ! *T-2 ! @m9 @+5 L*T-4t2 @m17 @+5 L*T4t-2 @m24 @+3 *T7
+
+m1Stream: @m2 ! m2: ! m1: ! m2: ! @+12 m3: !!
+
+// possible bug: I don't understand why we have different lh commands
+// L*T-4t2 and lh: L*T4t-2
+// I think the "undo" handling is a bit counterintuitive

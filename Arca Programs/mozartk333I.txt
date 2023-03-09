@@ -1,0 +1,10 @@
+//lh is down an octave for clarity
+
+scale = Scale(Bb C D Eb F G A); BasicDuration = .25; Tempo = 100; Spelling = Flats
+chord = Chord(Bb3 D4 F4, container = scale)
+lh = Arpeggiation(D3 Bb2 D3 F3, chord = chord, durations = 2)
+melody = Arpeggiation(N1+1 F5 N3+1 D5 N5+1 Bb4 - D5 F5 D5 N11+1 F5, durations = 1 1 1 1 2 2 6 2 2 2 4 8, chord = chord)
+
+chordStream: @24 T-2t1 @32 T-4t1 @48 T-2t1 @64 T1t-1
+lhStream: @16 -D3 ! ! t1 -Eb3 ! ! t-1 -C3 ! ! t1 -D3 ! !
+melodyStream: @12 ! !

@@ -1,0 +1,6 @@
+TimeSignature = 12/16; BeatDuration = .25; Spelling = Sharps
+Gmajor = Scale(G A B C D E F#)
+Figuration = Chord(G4 B4 D5 G5 D5 B4 D5 B4 G4 B4 G4 D4, 
+	container = Gmajor, progression = t1T-4 T-4 t-1T1)
+
+FigurationStream: & & & & @m4+11 *T-2t1
