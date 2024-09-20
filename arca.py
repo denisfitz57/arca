@@ -8,19 +8,27 @@ DEFAULTOUTPUT = '/Users/dmitri/Desktop/arcaoutput.musicxml'
 """
 Arca, a musical programming language (after Athanasius Kircher's Arca Musicarithmica, described in his 1650 book Musica Universalis) 
 
+VERSION 9/20/2024
+
 	Fundamental classes:
 
 	User:
 		Scale					Nestable scales
-		Chord					A concrete collection of notes, can have a default Arpeggiation, contains a Scale object for calculations
-		Arpeggiation			A "structured arpeggiation" that groups and orders a chord's notes, including nonharmonic tones
+		ScalePattern			A concrete collection of notes [replaces the more awkward Chord/Arpeggiation pair]
+		
+		To be phased out:
+			Chord					A concrete collection of notes, can have a default Arpeggiation, contains a Scale object for calculations
+			Arpeggiation			A "structured arpeggiation" that groups and orders a chord's notes, including nonharmonic tones
+		
 		Pattern					Combines arpeggiations from multiple chords into a flexible compositional object (TODO)
 		Program					Text interface to Arca
 		VelocityGenerator		simple routines for creating velocity structures (for MIDI applications)
-		RhythmGenerator			simple routines for creating rhythmic patterns
+		RhythmGenerator			simple routines for creating rhythmic patterns [TODO: add recursive nestability]
 	
 	Internal:
 		CoreVoiceLeading		Voice-leading routines common to Chord and Scale, not for direct use [but start here I think]
+									kind of pointless now that I have decided to phase out Chord, could be merged into Scale
+
 		Timeline				Used by Program, executes Arca functions in sequence
 		RepeatFunctionWrapper	Silly little class to allow indexing of repeatFunctions
 	
@@ -44,12 +52,20 @@ Arca, a musical programming language (after Athanasius Kircher's Arca Musicarith
 		In brython False == None is True, whereas None == False is False (I believe javascript converts to the first type)?  
 
 		Change spelling elegantly and quickly, at anypoint in the stream (sharps, flats)
+			good spelling is important and hard
 
 		griegNOWEB failed because of the @m syntax, but only in brython???  That is weird.  It works fine when converted to beats.
 			- solved by converting @m to integers, when they should be converted.  Should this happen elsewhere?
 			- and why was this making problems?  Makes me think the beat regularization is error-filled.  Check that out more thoroughly?
 
 		Chrome won't play Spiegel.  Too much audio info cued too far in advance?
+
+	TODO:
+		Rethink chord -- a chord should be a subclass of scale, or should include a scale in it
+		NHT syntax: 
+			level 0 current chord
+			level 1-n containers
+			level None = chromatic
 	
 	TODO:
 
@@ -93,6 +109,7 @@ Arca, a musical programming language (after Athanasius Kircher's Arca Musicarith
 		- use pure python
 		- avoid using scale degree numbers when possible (everything is initialized with MIDI)
 		- constructing objects is often easier with text
+		- use python for anything complicated; use the text language for simple things
 
 """
 
@@ -630,7 +647,7 @@ class CoreVoiceleading(Default):
 				pcCounts[PC] = count
 				
 				if count:
-					fullStructure[i] = n + .0001*count 				# turn duplicate into fractionally displaced PC
+					fullStructure[i] = round(n + .0001*count, 4)				# turn duplicate into fractionally displaced PC
 					foundMultiset = True
 		
 		if foundMultiset:
@@ -676,6 +693,11 @@ class CoreVoiceleading(Default):
 			V(A: -1, B: -2, C: 3) - transpositional VL schema
 			W(A: -1, B: -2, C: 3) - transpositional contrapuntal interchange
 			X(A: -1, B: -2, C: 3) - inversional contrapuntal interchange
+			TODO: 
+				need inversional contrapuntal VL schema 
+				all contrapuntal interchanges should have a counter (maybe they do?)
+				once defined you should be able to reuse contrapuntal interchanges without relabeling them
+					in other words, having done c.transform('X1(0:7, 4:-1, 7:-7)') you should be able to do c.transform('X1')
 		
 		TODO: 
 			Need dualist crossings
@@ -1328,12 +1350,15 @@ class Scale(CoreVoiceleading):
 	def scalarPC(self, midiNote):
 		return self.scale_degree((midiNote % 12) + self.keyOffset) % self.modulus			# this is very confusing, but needed
 	
+	def scalarPC_internal(self, scaleDegree):
+		return (scaleDegree - self.keyOffset) % self.len									# version of this for internal scale degrees
+	
 	def quantize(self, n, direction = 0, tieBreak = 1, extraTransposition = 0):
 		return self.__getitem__(self.scale_degree(n, direction, tieBreak, recurse = True) + extraTransposition)
 	
 	def update(self):
-		self.PCs = [x % abs(self.modulus) for x in self.currentNotes]								# voicelead can produce negative numbers or numbers > self.modulus
-		self.sortedPCs = sorted(self.PCs)												# needed for quantizing
+		self.PCs = [x % abs(self.modulus) for x in self.currentNotes]						# voicelead can produce negative numbers or numbers > self.modulus
+		self.sortedPCs = sorted(self.PCs)													# needed for quantizing
 		self.wrappedSortedPCs = self.sortedPCs + [self.sortedPCs[0] + abs(self.modulus)]	# useful for scale-degree calculations
 		self.doublePCs = self.sortedPCs + [x + abs(self.modulus) for x in self.sortedPCs]	# needed for big T little t
 		self.sortedSDs = [self.SDs[self.PCs.index(x)] for x in self.sortedPCs]
@@ -1448,8 +1473,27 @@ class Scale(CoreVoiceleading):
 	def get_note_in_hierarchy(self, note, level = None, depth = None):
 		if level is None or level >= len(self.hierarchy):
 			return note
-		collection = level % len(self.hierarchy)
+		collection = self.hierarchy[level % len(self.hierarchy)]
 		return collection.__getitem__(note, depth = depth)
+	
+	def get_interval_in_hierarchy(self, note, targetNote, level = None, checkErrors = True):			# specify notes with MIDI; this is for nonharmonic tonesf
+		if level is None or level >= len(self.hierarchy):
+			scalarInterval = (targetNote - note) % 12
+			l = 12
+		else:
+			collection = self.hierarchy[level % len(self.hierarchy)]
+			l = len(collection)
+			if checkErrors:
+				n = collection.notes
+				if note % 12 not in n: 
+					print("Pitch class", note %12, "not in scale", n)
+					return
+				elif targetNote % 12 not in n: 
+					print("Pitch class", targetNote %12, "not in scale", n)
+					return
+			scalarInterval = (collection.scale_degree(targetNote) - collection.scale_degree(note)) % l
+		if scalarInterval > l/2: return scalarInterval - l
+		return scalarInterval
 	
 	def has_PCs(self, pcList):
 		rc = self.raw_content()
@@ -1582,7 +1626,13 @@ class Scale(CoreVoiceleading):
 		
 		if direction is not None:
 			"""quantize to the nearest scale tone"""
-			if frac2 < frac1 or (frac2 == frac1 and tieBreak > 0):
+			if frac2 < frac1:
+				return upperSD
+			if frac1 < frac2:
+				return lowerSD
+			if tieBreak == None:								# randomly choose when confronted with ties
+				return random.choice([upperSD, lowerSD])
+			if tieBreak > 0:
 				return upperSD
 			return lowerSD
 		
@@ -1598,12 +1648,16 @@ class Scale(CoreVoiceleading):
 			return lowerSD + (frac1 / (frac1 + frac2))
 		return [lowerSD, upperSD]
 
-class Arpeggiation(Default):
+class ScalePattern(Default):
 	
 	"""
-	An arpeggiation pattern groups, orders, and embellishes the notes of a chord.
+	A ScalePattern groups, orders, and embellishes notes in a scale.  It is a component of a MultiPattern, which can manipulate multiple patterns.
 	
-	The main thing it supplies is NHT syntax [though this should probably be moved to CoreVoiceLeading]
+	This is a rewriting of the Arpeggiation class, which requires a chord.  It is a first step toward eliminating chords, which are more trouble than they're worth.
+	
+	The main things it supplies are (a) ordering; and (b) NHT syntax.
+	
+	TODO: write "save" and "restore" routines that allow for cardinality changes.
 	
 	NHT syntax: 
 	
@@ -1611,18 +1665,14 @@ class Arpeggiation(Default):
 			['N', targetNote, hierarchicalLevel, interval]
 				here the nonharmonic tone is targetNote + interval within the scale given by hierarchicalLevel
 				hierarchicalLevel of 'S' represents a chordal skip
-		
-			['D', targetNote, hierarchicalLevel, interval]
-				neighbor tones created by Chord, representing note Duplications.  
-				Functionally equivalent to neighbors, but updated differently.
-
-		Or for pedal tones that don't change:
-			['P', pedalNote, hierarchicalLevel]
+				TODO: control quantization direction, which should be the opposite of the skip
 	
-		TODO: transposable pedal, or addressable notes
-			['CHORDELEMENT', 'R'] [root, set up a chordelement dictionary]
-
-		Or for inversional nonharmonic tones:
+		Unanchored neighbors (displacements):
+			['F', targetNote, targetLevel, interval, intervalLevel]
+				basically a nonharmonic tone but not directed at another note in the motive
+				targetLevel is relative to the chord's own scale, so one level deeper than most nonharmonic tones
+	
+		Inversional nonharmonic tones:
 			['I', targetNote, hierarchicalLevel, indexNumber]
 
 		Rests are nonharmonic tones, useful for arpeggiation:
@@ -1630,9 +1680,16 @@ class Arpeggiation(Default):
 
 		Tacit harmonic notes (useful for initializing a motive that doesn't have every note in its chord)
 			['T', 60]
+
+		Pedal tones:
+			['P', pedalNote, hierarchicalLevel, interval]
+				pedalNote is a scale degree at hierarchical level1 
+			TODO: these are unanchored neighbors, just translate them into that language
+	
+		TODO: transposable pedal, or addressable notes
+			['CHORDELEMENT', 'R'] [root, set up a chordelement dictionary]
 			
 		TODO:
-	
 		Quantized value (Partian tintinabulation)
 			['Q', targetNote, hierarchicalLevel, interval, quantizeDirection]
 		
@@ -1657,6 +1714,573 @@ class Arpeggiation(Default):
 							'container': None,
 							'chord': None,
 							'outPCs': [],
+							'newScale': False,
+							
+							'autoQuantize': {'direction': 0, 'tieBreak': 1},			# arguments to scale quantize
+							
+							'noteGroups': [],
+							'fullStructure': [],
+							'screenedNotes': [],
+							'durations': [1],
+							
+							'objectDict': {},					# for multi-object structures
+							
+							'currentOutput': [],
+							
+							'useGroups': True,
+							
+							'chainMotive': False,
+							'lastChordTone': False,
+							
+							'iterIndex': 0,
+							'noteIndex': 0
+						}
+	
+	def __init__(self, *args, **kwargs):
+		
+		self.set_default_arguments(kwargs)
+			
+		if args:
+			self.startNotes = args[0]
+			if type(self.startNotes) is str:
+				self.startNotes = self.parse_string(self.startNotes)
+			
+		self.modulus = len(self.container) if self.container else 12
+		
+		self.initialStartNotes = self.startNotes[:]
+		
+		if self.startNotes:
+			self.fullStructure, self.noteGroups, screenedNotes = self.parse_nonharmonic_tones()
+			if not self.screenedNotes:
+				self.screenedNotes = screenedNotes
+			if not self.noteGroups:
+				self.noteGroups = noteGroups
+		
+		if self.defaultArgs.get('useGroups'):				# should be irrelevant?
+			self.useGroups = True
+		
+	def parse_string(self, s):
+		"""
+		Text syntax:
+		
+			brackets identify groups
+		
+			[atom1 atom2] []
+		
+			xANYTHING - tacit note
+		
+			xNy+z or xNy-z: neighbor tone at level x of the hierarchy, target note y, interval z (+ or - is required).  If x is missing it = 0.
+			CSy+z or CSy-z: chordal skip, target y, steps z
+			CNy+z or CNy-z: chromatic neighbor
+		
+			Px pedal tone x
+		
+		
+		"""
+		
+		sSplit = parse_paren_unit(s.split(), '[', ']')
+		sSplit = [x.replace('[', '').replace(']', '') for x in sSplit]
+		
+		sSplit = parse_paren_unit(sSplit, '(', ')')
+		
+		out = []
+		totalSyms = 0
+		lastNote = False
+		
+		for theSym in sSplit:
+			symSplit = [x for x in theSym.split() if x]
+			symSplit = parse_paren_unit(symSplit, '(', ')')
+			if len(symSplit) == 1:
+				targetList = out
+				nestFlag = False
+			else:
+				targetList = []
+				nestFlag = True
+			for atom in symSplit:
+				if atom.startswith('CS'):
+					atom = atom.replace('CS', 'SN')
+				quantizationData = []
+				if atom.count('Q'):
+					i = atom.index('Q')
+					qData = atom[i+1:].split(' ')
+					atom = atom[:i]
+					varName = qData[0].replace('(', '')
+					direction = int(parse_number(qData[1])) if len(qData) > 1 else 0
+					tieBreak = int(parse_number(qData[2])) if len(qData) > 2 else 1
+					extraTranspositions = int(parse_number(qData[3])) if len(qData) > 3 else 0
+					quantizationData = [varName, direction, tieBreak, extraTranspositions]
+				
+				if atom.startswith('x') or atom.startswith('X'):
+					tacitFlag = True
+					atom = atom[1:]
+				else:
+					tacitFlag =  False
+				if atom.count('N'):
+					obj = self.parse_neighbor(atom) + quantizationData
+					lastNote = False
+				elif atom.startswith('P'):										# pedal tone, need to have level as a settable parameter
+					obj = ['P', parse_lettername(atom[1:]), None]
+					lastNote = copy.deepcopy(obj)
+				elif atom == '-':												# shorthand for repeating the last note
+					if lastNote:						
+						obj = lastNote
+					else:									
+						obj = ['N', totalSyms - 1, None, 0]
+				elif atom == 'R':
+					obj = ['R']
+					lastNote = copy.deepcopy(obj)
+				else:
+					obj = parse_lettername(atom)
+					lastNote = obj
+				if tacitFlag:
+					obj = ['T', obj]
+				targetList.append(obj)
+				totalSyms += 1
+			if nestFlag:
+				out.append(targetList)
+				lastNote = copy.deepcopy(targetList)
+		return out
+	
+	def parse_neighbor(self, s):
+		if s.count('('):
+			i = s.index('(')
+			j = s.index(')')
+			objectString = s[i+1:j]
+			s = s[:i] + s[j+1:]
+			varName, num, *junk = objectString.split()
+			target = (self.get_object(varName), int(num))
+		else:
+			target = None
+		level, data = s.split('N')
+		if data.count("+"):
+			data = data.split('+')
+			sign = 1
+		else:
+			data = data.split('-')
+			sign = -1
+		if not level:
+			level = 0
+		elif level.count('C'):
+			level = None
+		elif level.count('S'):
+			level = 'S'
+		else:
+			level = int(level)
+		if target is None:
+			target = int(data[0])
+		interval = sign*int(data[1])
+		return ['N', target, level, interval]
+		
+	def get_object(self, varName):
+		qObj = self.objectDict.get(varName)
+		if not qObj:
+			print("ARCA ERROR: Can't find quantization object:", varName)
+			return False
+		self.associatedObjects.add(qObj)
+		return qObj
+	
+	def t(self, littleT = 0):
+		self.scale.t(littleT)
+		
+	def quantize_MIDI_note(self, n):
+		sd = self.container.scale_degree(n, direction = None, recurse = True)
+		if type(sd) is int:
+			return sd
+		if not self.autoQuantize: 
+			print("NONHARMONIC NOTE NOT IN CONTAINER, choosing upper neighbor", n)
+			return int(round(sd, 0))
+		return float(n)
+	
+	def autoquantize(self, n):
+		n = int(n)
+		for i, c in enumerate(self.scale.hierarchy):
+			"""This is not tested"""
+			testSD = c.scale_degree(n, direction = None, recurse = True)
+			if type(testSD) is int:
+				target = self.container.scale_degree(n, recurse = True, **self.autoQuantize)
+				targetMIDI = self.container[target]
+				targetAtLevel = c.scale_degree(targetMIDI, recurse = True)
+				return ['F', target, 0, testSD - targetAtLevel, i]							# ['F', targetNote, targetLevel, interval, intervalLevel]
+		target = self.scale.scale_degree(n, recurse = True, **self.autoQuantize)
+		targetMIDI = self.container[target]
+		return ['F', target, 0, n - targetMIDI, None]
+		
+	def parse_nonharmonic_tones(self, notes = None):
+		
+		if notes is None:
+			notes = self.startNotes[:]
+		
+		notes, noteGroups = flatten_note_list(notes)
+		totalNotes = []
+		
+
+		"""First, convert MIDI notes to scale degrees in the containing scale"""
+		"""TODO: Test this to make sure it works with multisets, which should be handled at the scale level"""
+		if self.useMidi and self.container:
+			newNotes = []
+			for n in notes:
+				if type(n) is not list:
+					newNotes.append(self.quantize_MIDI_note(n))
+				else:
+					if n[0] == 'T':
+						n[1] = self.quantize_MIDI_note(n[1])			# tacit note
+						newNotes.append(n)
+					elif n[0] == 'F':					
+						level = min(0, n[2] - 1)								
+						n[1] = self.container.hierarchy[level].scale_degree(n[1], recurse = True)		# ['F', targetNote, targetLevel, interval, intervalLevel]
+						if level == 0: newNotes.append(n)
+					newNotes.append(n)
+			notes = newNotes
+		
+		"""Now, collect harmonic notes so we can make the motive's intrinsic scale"""
+		harmonicNotes = []
+		screenedNotes = []										# notes not to play
+		
+		for i, n in enumerate(notes):
+			if type(n) is list:
+				if n[0] == 'T':
+					screenedNotes.append(i)
+					harmonicNotes.append(n[1])
+				elif n[0] == 'F' and n[2] == 0:
+					harmonicNotes.append(n[1])
+			elif type(n) is int:
+				harmonicNotes.append(n)
+		
+		if self.container:
+			keyOffset = self.container.keyOffset
+			harmonicNotes = [self.container.scalarPC_internal(x) for x in harmonicNotes]
+		else:
+			keyOffset = 60
+			harmonicNotes = [x % self.modulus for x in harmonicNotes]
+			
+		harmonicNotes = sorted(set(harmonicNotes))
+		
+		self.scale = Scale(harmonicNotes, container = self.container, keyOffset = keyOffset, useMidi = False)
+		
+		fullStructure = notes[:]								# don't need to rename I don't think
+		
+		for i, n in enumerate(fullStructure):
+			
+			if type(n) is float:								# once we have the intrinsic scale, autoquantize the floats
+				fullStructure[i] = self.autoquantize(n)
+			elif type(n) is list:
+				if n[0] == 'F' and n[2] == 0:
+					n[1] = self.scale.scale_degree(n[1], recurse = False)
+			else:
+				fullStructure[i] = (self.scale.scale_degree(n, recurse = False),)
+				
+		self.lastFullStructure = copy.deepcopy(fullStructure)
+		
+		if screenedNotes:
+			newNoteGroups = []
+			for n in noteGroups:
+				if type(n) is int:
+					if n not in screenedNotes:
+						newNoteGroups.append(n)
+				elif type(n) is list:
+					l = [x for x in n if x not in screenedNotes]
+					if l:
+						newNoteGroups.append(l)
+			noteGroups = newNoteGroups
+					
+		return fullStructure, noteGroups, screenedNotes
+			
+	def evaluate_NHT(self, fullStructureIndex = 0, fullStructure = None): #note = 60, level = 0, alteration = lambda x: x):
+		
+		"""	
+			This is a third version of evaluate_NHT that is nonrecursive and which builds chords note-by-note.  
+			
+			It can handle chord changes during the life of a motive.
+		
+			as you go through fullStructure starts as a specification of the motive, and gradually gets you
+			which the recursive structures cannot.
+		
+			TODO: Incorporate this new logic into the CoreVoiceleading version of the routine.
+		
+			TODO: save all the scale degrees of the different NHTs?
+		
+			TODO: forward looking NHT evaluation?
+		
+		
+		"""
+		
+		if fullStructure is None:
+			fullStructure = self.fullStructure
+		
+		n = fullStructure[fullStructureIndex]
+		
+		"""tuples are scale degrees; integers are chromatic MIDI notes that have already been calculated"""
+		if type(n) is tuple:
+			return self.scale[n[0]]
+			
+		elif type(n) is int:
+			return n
+			
+		elif n is None:
+			return None
+		
+		NHTtype = n[0]
+		
+		if NHTtype == 'R':						# rest
+			return None
+			
+		elif NHTtype == 'P':
+			targetNote = n[1]
+			level = n[2]
+			"""TODO: test this, I suspect it doesn't work exactly"""
+			if self.container and level is not None:
+				targetNote = self.container.hierarchy[level].__getitem__(note)
+			return self.scale.output_note(targetNote)
+		
+		elif NHTtype == 'F':					# floating nonharmonic tone ['F', targetNote, targetLevel, intervalLevel, interval]
+			targetNote = self.scale.get_note_in_hierarchy(n[1], level = n[2])
+			parameter = n[3]
+			if n[4] != None:
+				level = n[4] - 1
+			else:
+				level = None
+			quantize = False
+		
+		else:
+			"""first recurse through the NHT chain, and then the collectional chain, to get the chromatic representation of the target note"""
+			if type(n[1]) is not int:
+				targetnote = n[1][0].__getitem__(n[1][1])
+			
+			targetNote = self.evaluate_NHT(n[1], fullStructure)
+			level = n[2]
+			parameter = n[3]
+			quantize = len(n) > 4 
+		
+		"""
+		
+		Test implementation of chordal skips
+				TODO: allow quantization
+		
+		"""
+		
+		if level == 'S':
+			""" TODO: allow control of quantization """
+			
+			if len(n) > 4:
+				quantizeDirection = n[4]
+			else:
+				quantizeDirection = -parameter
+				
+			targetNote = self.scale.quantize(targetNote, direction = quantizeDirection)
+			
+			return self.scale.output_note(targetNote + parameter)
+			
+		"""back up the hierarchy to the NHT level"""
+		if self.container:
+			if level and level >= len(self.container.hierarchy):
+				level = None
+			if level is not None:
+				level = level % len(self.container.hierarchy)
+				targetNote = self.container.hierarchy[level].scale_degree(targetNote, direction = 0)			# find the scale degree at the appropriate level corresponding to the chromatic note
+		else:
+			level = None
+		
+		"""make the alteration"""
+		if NHTtype == 'I':
+			targetNote = parameter - targetNote
+		else:
+			targetNote = targetNote + parameter
+		
+		"""back down the collectional hierarchy to the chromatic scale"""
+		if level is not None:
+			targetNote = self.container.hierarchy[level].__getitem__(targetNote, recurse = True)
+		
+		"""if we want to quantize, do it here"""
+		if quantize:								
+			qObj = self.objectDict.get(n[4])
+			direction = n[5] if len(n) > 5 else 0
+			tieBreak = n[6] if len(n) > 6 else 1
+			extraTransposition = n[7] if len(n) > 7 else 0
+			targetNote = qObj.quantize(targetNote, direction = direction, tieBreak = tieBreak, extraTransposition = extraTransposition)	
+		
+		return self.scale.output_note(targetNote)
+	
+	def get_durations(self):
+		durations = []
+		for i in range(len(self.iterObject)):
+			durations.append(self.durations[(self.noteIndex + i)%len(self.durations)])
+		self.noteIndex += i + 1
+		return durations
+		
+	def __iter__(self):
+		self.iterIndex = -1
+		return self
+	
+	def __next__(self):
+		self.iterIndex += 1
+		if self.iterIndex < len(self.iterObject):
+			if self.useGroups:
+				return self.get_group(self.iterIndex)
+			return self[self.iterIndex]
+		else:
+			raise StopIteration
+		
+	def __len__(self):
+		return len(self.iterObject)
+	
+	def __getitem__(self, key): #, makeList = True):
+		
+		if isinstance(key, slice):
+			start = key.start if (key.start is not None) else 0
+			end = key.stop if (key.stop is not None) else len(self.fullStructure)
+			step = key.step if (key.step is not None) else 1
+			return [self.build_output(x) for x in range(start, end, step)]
+		elif isinstance(key, list):
+			return [self.build_output(x) for x in key]
+		
+		return self.build_output(key)
+	
+	def invert_motive(self):
+		for l in self.fullStructure:
+			if l[0] in 'DNF':
+				l[3] = l[3]*-1
+	
+	def transform(self, s):
+		s = s.replace(' ', '')
+		if s.startswith('*'):
+			return self.scale.transform(s[1:])
+		elif s.startswith('i'):
+			self.invert_motive()
+		else:
+			return self.scale.transform(s)
+	
+	def get_notes(self):
+		return [self.evaluate_NHT(x) for x in [i for i in range(len(self.fullStructure)) if i not in self.screenedNotes]]
+	
+	@property
+	def useGroups(self):
+		if self.iterObject == self.noteGroups:
+			return True
+		return False
+	
+	@useGroups.setter
+	def useGroups(self, val):
+		if val:
+			self.iterObject = self.noteGroups
+		else:
+			self.iterObject = [x for x in range(len(self.fullStructure)) if x not in self.screenedNotes]
+	
+	def build_output(self, i = 0, reset = False):
+		
+		if reset or i == 0 or (not self.currentOutput):
+			self.currentOutput = self.fullStructure[:]
+			if self.chainMotive and self.lastChordTone:
+				self.currentOutput[0] = copy.deepcopy(self.lastChordTone)
+		
+		if i != 0 and (not (type(self.currentOutput[i-1]) is int)):
+			self.build_output(i-1)
+		
+		n = self.evaluate_NHT(i, self.currentOutput)
+		self.currentOutput[i] = n
+		
+		"""n is chromatic, sd is a scale degree"""
+		"""TODO: fix this, """
+		if n and self.chainMotive:
+			self.lastChordTone = n
+			print("ERROR: CHAINMOTIVE NEEDS TO BE IMPLEMENTED FOR SCALEPATTERN")
+			"""if self.container:
+				sd = self.container.scale_degree(n)
+			ct = self.chord.get_chord_tone(sd)
+			if ct:
+				self.lastChordTone = ct"""
+				
+		return n
+	
+	def build_groups(self, groupNumber = 0, reset = None):
+		if reset is None:
+			reset = (groupNumber == 0)
+		index = self.noteGroups[groupNumber]
+		if type(index) is int:
+			self.build_output(index, reset = reset)
+			return [self.currentOutput[index]]
+		if type(index) is list:
+			self.build_output(max(index), reset = reset)
+			return [self.currentOutput[x] for x in index]
+		self.build_output(index.stop - 1, reset = reset)
+		return self.currentOutput[index]
+	
+	def get_group(self, index):
+		return self.build_groups(index)
+	
+	@property
+	def notes(self):
+		return self.get_notes()
+
+class Arpeggiation(Default):
+	
+	"""
+
+	
+	An arpeggiation pattern groups, orders, and embellishes the notes of a chord.
+	
+	The main thing it supplies is NHT syntax [though this should probably be moved to CoreVoiceLeading]
+	
+	NHT syntax: 
+	
+		Incomplete neighbors (can also be used for passing tones or complete neighbors):
+			['N', targetNote, hierarchicalLevel, interval]
+				here the nonharmonic tone is targetNote + interval within the scale given by hierarchicalLevel
+				hierarchicalLevel of 'S' represents a chordal skip
+	
+		Unanchored neighbors:
+			['F', targetNote, targetLevel, interval, intervalLevel]
+				basically a nonharmonic tone but not directed at another note in the motive
+				targetLevel is relative to the chord's own scale
+	
+		Pedal tones:
+			['P', pedalNote, hierarchicalLevel, interval]
+				pedalNote is a scale degree at hierarchical level1 
+				TODO: these are bascially unanchord neighbors, they can be made obsolete
+		
+		TODO: These are obsolete
+		Octave doublings: ['D', targetNote, hierarchicalLevel, interval]
+			neighbor tones created by Chord, representing note Duplications.  
+			Functionally equivalent to neighbors, but updated differently.
+	
+		TODO: transposable pedal, or addressable notes
+			['CHORDELEMENT', 'R'] [root, set up a chordelement dictionary]
+
+		Or for inversional nonharmonic tones:
+			['I', targetNote, hierarchicalLevel, indexNumber]
+
+		Rests are nonharmonic tones, useful for arpeggiation:
+			['R']
+
+		Tacit harmonic notes (useful for initializing a motive that doesn't have every note in its chord)
+			['T', 60]
+			
+		TODO:
+	
+		Quantized value (Partian tintinabulation)
+			['Q', targetNote, hierarchicalLevel, interval, quantizeDirection]
+		
+			['N', targetNote, hierarchicalLevel, interval, quantizationObject, quantizationDirection]
+	
+		For most NHTs, herarchical levels are listed from surface to background:
+	
+			Level 0 ... x containing scales
+			Level None chromatic scale
+	
+		For the Unanchored Neighbors, the scale of the motive is level 0, so all those numbers are increased by one.
+		
+		These all need a text form as well:
+			3N4–1 nonharmonic tone
+	
+	"""
+	
+	defaults = {'startNotes': [60, 62, 64],
+							
+							'modulus': 12,
+							'multiset': False,
+							'useMidi': True,
+							
+							'container': None,
+							'outPCs': [],
 							'newChord': False,
 							
 							'currentNotes': [],
@@ -1665,7 +2289,6 @@ class Arpeggiation(Default):
 							'screenedNotes': [],
 							'durations': [1],
 							
-							'makeRecursiveNeighbors': False,
 							'objectDict': {},					# for multi-object structures
 							'dependentObjects': [],
 							
@@ -1854,7 +2477,7 @@ class Arpeggiation(Default):
 					myNotes[i] = targetNote + interval + tDict.get(targetNote % self.modulus, 0)
 		
 		output = self.parse_nonharmonic_tones_without_replacement(myNotes, useMidi = False)
-		junk, self.fullStructure, self.noteGroups, junk = output
+		junk, self.fullStructure, junk, junk = output
 		
 	def parse_nonharmonic_tones(self, notes = None):
 		
@@ -1918,9 +2541,10 @@ class Arpeggiation(Default):
 		
 		self.lastFullStructure = copy.deepcopy(fullStructure)
 		
+		"""
 		if self.makeRecursiveNeighbors:
 			for i, n in enumerate(fullStructure):
-				fullStructure[i] = self.create_recursive_neighbors(n, fullStructure)
+				fullStructure[i] = self.create_recursive_neighbors(n, fullStructure)"""
 		
 		if screenedNotes:
 			newNoteGroups = []
@@ -2045,6 +2669,7 @@ class Arpeggiation(Default):
 		return n
 			
 	def evaluate_NHT(self, fullStructureIndex = 0, fullStructure = None): #note = 60, level = 0, alteration = lambda x: x):
+		
 		"""	
 			This is a third version of evaluate_NHT that is nonrecursive and which builds chords note-by-note.  
 			
@@ -2092,14 +2717,25 @@ class Arpeggiation(Default):
 				targetNote = targetNote[0]
 			return self.chord.output_note(targetNote + n[3])
 		
-		"""first recurse through the NHT chain, and then the collectional chain, to get the chromatic representation of the target note"""
+		elif NHTtype == 'F':					# floating nonharmonic tone ['F', targetNote, targetLevel, interval, intervalLevel]
+			targetNote = self.chord.scale.get_note_in_hierarchy(n[1], level = n[2])
+			parameter = n[3]
+			if n[4] != None:
+				level = n[4] - 1
+			else:
+				level = None
+			quantize = False
 		
-		if type(n[1]) is not int:
-			targetnote = n[1][0].__getitem__(n[1][1])
+		else:
+			"""first recurse through the NHT chain, and then the collectional chain, to get the chromatic representation of the target note"""
+		
+			if type(n[1]) is not int:
+				targetnote = n[1][0].__getitem__(n[1][1])
 			
-		targetNote = self.evaluate_NHT(n[1], fullStructure)
-		level = n[2]
-		parameter = n[3]
+			targetNote = self.evaluate_NHT(n[1], fullStructure)
+			level = n[2]
+			parameter = n[3]
+			quantize = len(n) > 4 
 		
 		"""
 		
@@ -2150,7 +2786,7 @@ class Arpeggiation(Default):
 			targetNote = self.container.hierarchy[level].__getitem__(targetNote, recurse = True)
 		
 		"""if we want to quantize, do it here"""
-		if len(n) > 4:
+		if quantize:								
 			qObj = self.objectDict.get(n[4])
 			direction = n[5] if len(n) > 5 else 0
 			tieBreak = n[6] if len(n) > 6 else 1
@@ -2272,6 +2908,8 @@ class Arpeggiation(Default):
 class Chord(CoreVoiceleading):
 	
 	"""
+	
+	WARNING: DEPRECATED IN FAVOR OF SCALEPATTERN
 	
 	A Chord is a collection of harmonic notes with no pitch-class duplicatons (currentNotes) 
 	plus one or more Arpeggiations (mainPattern) which can have PC doublings and nonharmonic tones.
@@ -2472,7 +3110,7 @@ class Chord(CoreVoiceleading):
 	def __getitem__(self, key):
 		
 		if isinstance(key, slice):
-			start = key.start
+			start = key.start if (key.start is not None) else 0
 			end = key.stop if (key.stop is not None) else start + len(self.currentNotes)
 			step = key.step if (key.step is not None) else 1
 			return [self.__getitem__(x) for x in range(start, end, step)]
@@ -3407,6 +4045,13 @@ class Timeline(Default):
 		
 		sequenceList = self.actionItems.get(offset, [])
 		
+		"""TODO: fix Brython kludge"""
+		try:
+			del self.actionItems[offset]
+		except:
+			i = int (offset)
+			del self.actionItems[i]			# if i in self.actionItems ... [???]
+		
 		for sequenceNumber, sequence in enumerate(sequenceList):
 			self.currentOffset = offset
 			for i, action in enumerate(sequence):
@@ -3418,7 +4063,10 @@ class Timeline(Default):
 			if self.currentOffset != offset and len(sequence) > i+1:
 				self.add_sequence(self.currentOffset, sequence[i+1:])
 		
-		del self.actionItems[offset]
+		"""try:
+			
+		except:
+			pass"""
 		
 	def parse_command_list(self, inputList, targetBeat = 0):
 		
@@ -3615,8 +4263,8 @@ class Timeline(Default):
 		if indices:
 			if indices[1] is None:
 				indices[1] = len(durations)
-			if indices[0]:
-				functionToCall = self.playnote_incomplete
+			#if indices[0]:						# ELIMINATED THIS.  MIGHT CAUSE PROBLEMS???
+			functionToCall = self.playnote_incomplete
 			iterationObj = range(indices[0], indices[1], indices[2])
 		if indices is None:
 			iterationObj = range(len(durations))
