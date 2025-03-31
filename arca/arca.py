@@ -1,6 +1,6 @@
 import random, copy
 from .arcatools import *				# contains utility routines used throughout
-from ..DTXML import Writer
+from .DTXML import Writer
 
 DEFAULTDIRECTORY = '/Users/denis/Documents/arca/arca/Arca Programs/'
 DEFAULTOUTPUT = '/Users/denis/Desktop/arcaoutput.musicxml'
