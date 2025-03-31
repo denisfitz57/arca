@@ -1,5 +1,5 @@
 import random, copy
-from arcatools import *				# contains utility routines used throughout
+from .arcatools import *				# contains utility routines used throughout
 import DTXML
 
 DEFAULTDIRECTORY = '/Users/denis/Documents/arca/arca/Arca Programs/'
