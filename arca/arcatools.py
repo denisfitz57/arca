@@ -156,7 +156,7 @@ def rotate_to_start(l, targetNote = 0, modulus = 12):
 ================================================================
 """
 		
-def geometrical_normal_form_local(inList, invert = False, modulus = 12, extraRotations = 0):				
+def geometrical_normal_form_local(inList, invert = False, modulus = 12):				
 	
 	"""
 	
@@ -541,7 +541,7 @@ def minimum_vl(first, second, sort = True, modulus = 12):		# do better for chord
 
 """
 	the ignore function describes lists that should be preserved	
-
+	
 """
 	
 def default_ignore_function(item):
@@ -580,7 +580,7 @@ def flatten_list(l, ignoreFunction = default_ignore_function):
 		Group a split-up list of strings by parentheses
 ================================================================
 
-  Turns ['ca', 'p(', 'y', ')', 'bara'] into ['ca', p(y)', 'bara']
+   Turns ['ca', 'p(', 'y', ')', 'bara'] into ['ca', p(y)', 'bara']
 	
 """
 
