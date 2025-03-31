@@ -1,0 +1,5 @@
+TimeSignature = 3/4; BeatDuration = .25; Spelling = flats
+Scale = Scale(Bb C D Eb F G A)
+Chord = Chord([Bb3 D4 F4], durations = 2 1, container = Scale)
+
+ChordStream: ! ! T-1 ! ! ! !  T1t-1 ! !

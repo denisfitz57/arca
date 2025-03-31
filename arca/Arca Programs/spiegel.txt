@@ -1,0 +1,24 @@
+// Part's Spiegel im Spiegel (produced by a python program)
+// Does not currently play on Chrome
+
+TimeSignature = 6/4; Tempo = 60; Spelling = Flats
+BasicDuration = 1
+X = Macro(N2-5 N2-1Q(b -1 0) A5)
+CAD = Macro(changeduration(0 15) ! @+3 changeduration(0 6))
+
+a = Scale(C D E F G A Bb)
+b = Scale(C F A, container = a)
+m = Chord(A4, durations = 6, container = a)
+arp = Arpeggiation(X X, durations = 1, chord = m)
+
+echoup = Arpeggiation(R xA4 CN1+13Q(b 1 1 1), durations = 3, chord = m)
+echodown = Arpeggiation(R xA4 CN1+2Q(b -1 -1 -1), durations = 3, chord = m)
+
+cadechoup = Chord(R [C6 C7] R, durations = 6, container = a)
+cadechodown = Chord(R [F2 F1] R, durations = 6, container = a)
+
+mStream: -A4 T0 CAD T-1 ! T1 CAD T1 ! T-1 CAD T-2 ! T1 ! T1 CAD T2 ! T-1 ! T-1 CAD T-1 ! T-1 ! T-1 ! T3 CAD T1 ! T1 ! T1 ! T-3 CAD T-4 ! T1 ! T1 ! T1 ! T1 CAD T4 ! T-1 ! T-1 ! T-1 ! T-1 CAD T-1 ! T-1 ! T-1 ! T-1 ! T-1 ! T5 CAD T1 ! T1 ! T1 ! T1 ! T1 ! T-5 CAD T-6 ! T1 ! T1 ! T1 ! T1 ! T1 ! T1 CAD T6 ! T-1 ! T-1 ! T-1 ! T-1 ! T-1 ! T-1 CAD T-1 ! T-1 ! T-1 ! T-1 ! T-1 ! T-1 ! T-1 ! T7 CAD T1 ! T1 ! T1 ! T1 ! T1 ! T1 ! T1 ! T-7 CAD T-8 ! T1 ! T1 ! T1 ! T1 ! T1 ! T1 ! T1 ! T1 CAD T8 ! T-1 ! T-1 ! T-1 ! T-1 ! T-1 ! T-1 ! T-1 ! T-1 CAD T0 CAD 
+
+arpStream: ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! 
+
+echoupStream: cadechodown: ! echoup: ! cadechodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! cadechoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! echodown: ! cadechoup: ! echodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! echodown: ! cadechoup: ! echodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! echodown: ! cadechoup: ! echodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! echodown: ! echoup: ! cadechodown: ! cadechoup: ! 

@@ -1,0 +1,11 @@
+// example 204 from Technique of My Musical Language, the actual music
+
+BasicDuration = 1; Tempo = 60
+
+a = Scale(C D E F G A B)
+b = Chord([G3 A3 C4 D4 F4], container = a, durations = 2)
+c = Arpeggiation([CN2+2 CN3+2] [E5 B4], container = a) 
+
+aStream: T6 @2 T-2 @4 T-3 @6 T7 @8 T-2
+bStream: ! t1 ! t1 -Ab4 +Ab5 ! t-3 -Eb4 +Eb5 ! t1 !
+cStream: !!!!!

@@ -1,0 +1,8 @@
+TimeSignature = 12/16; BeatDuration = .25; Spelling = Sharps
+Gmajor = Scale(G A B C D E F#)
+Triad = Scale(G B D, container = Gmajor, progression = t-1T3 t-1T3 t-1T1)
+Figuration = Arpeggiation(G4 B4 D5 G5 D5 B4 D5 B4 G4 B4 G4 D4, container = Triad)
+
+X = Macro(Triad: next Figuration: )
+TriadStream: @m4+11 *T-2t1			// final 5-6 motion
+FigurationStream: ! *t-1 X ! *t-2 X ! X *t0 ! 	// irregular transpositions (*tx)

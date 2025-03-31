@@ -1,0 +1,13 @@
+// Chopin's A minor prelude (approximate)
+
+Scale = Scale(E F# G A B C D)
+Figuration = Chord([E2 B2] [CN1-1 G3] [B2 E2] [G2 G3], container = Scale)
+Melody = Arpeggiation(E4 CN0-5 CS1+1, durations = 7 1 8, chain, chord = Figuration)
+
+ScaleStream: @56 T7t-4 @80 newscale(12) @113 newscale(C D E F G A B)
+
+FigurationStream: {X = Macro(!! t-1T2 !! L1 ! L*t-1T2 !)} !!!! X t-2T3 +G1 !!!! t2T2 X 
+	voicelead(E: -1) addnote(F#3) !!! voicelead(C#: -1) ! voiceexchange(F#, A) !!!
+	voicelead(F#: -1, C: -1) ! voicelead(B: 1, D#: 1)t-1 !!!! T-2t1 @+12 !! T-2t1
+
+MelodyStream: @16 !! @+8 !! @+18 changeduration(0 13) ! changeduration(0, 7) ! @+8 !

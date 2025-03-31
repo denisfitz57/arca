@@ -1,0 +1,7 @@
+TimeSignature = 3/4; BeatDuration = .25; Spelling = flats
+Scale = Scale(Bb C D Eb F G A)
+Chord = Chord([Bb3 D4 F4], durations = 8, container = Scale)
+Melody = Arpeggiation(D5 N0+1 N3+1 Bb4 - - -, chord = Chord, durations = 3 1 2 2 4 4 8)
+
+ChordStream: @12 ! @24 T-1 ! @36 ! @48 T1t-1 +Bb2 !
+MelodyStream: @8 ! t1 !

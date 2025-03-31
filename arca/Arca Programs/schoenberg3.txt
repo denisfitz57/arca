@@ -1,0 +1,10 @@
+// Schoenberg deforming Mozart (part C, more accurate)
+// chromatic neighbors to each inversion of the chord (last chord voiced differently)
+// here we have to use two chords to keep the voices accurate
+// this is really a sequence, and needs to be implemented in Arca
+
+BasicDuration = 1; Tempo = 60
+
+a = Chord([Eb3 B3 G#4 G5])
+b = Chord([D3 C4 A4 F#5])
+aStream: ! b: ! a: t1 ! b: t1 ! a: t1 ! b: t1 ! a: C3 ! b: C1 !

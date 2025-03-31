@@ -2,8 +2,8 @@ import random, copy
 from arcatools import *				# contains utility routines used throughout
 import DTXML
 
-DEFAULTDIRECTORY = '/Users/dmitri/Source Code/Python/Arca Programs/'
-DEFAULTOUTPUT = '/Users/dmitri/Desktop/arcaoutput.musicxml'
+DEFAULTDIRECTORY = '/Users/denis/Documents/arca/arca/Arca Programs/'
+DEFAULTOUTPUT = '/Users/denis/Desktop/arcaoutput.musicxml'
 
 """
 Arca, a musical programming language (after Athanasius Kircher's Arca Musicarithmica, described in his 1650 book Musica Universalis) 

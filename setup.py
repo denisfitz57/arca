@@ -7,8 +7,5 @@ setup(
     description='A pattern language for music',
     packages=find_packages(),
     install_requires=[
-        'random',
-        'copy',
-        'DTXML',
     ],
 )

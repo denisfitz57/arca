@@ -1,0 +1,14 @@
+// A simple version of the Bach D-minor two-part invention, BWV 775
+// This program does not model the chords, only the scales and the main motive
+
+TimeSignature = 3/8; BasicDuration = .25; Tempo = 180
+
+Scale = Scale(D E F G A Bb C)
+Motive = Chord(D4 E4 F4 G4 A4 Bb4 C4 Bb4 A4 G4 F4 E4, container = Scale)
+
+X = Macro((length = 1))
+Z = Macro((length = 2))
+
+ScaleStream: L-2 @m7 L*T-7t4 @m23 L-1 @m24 L*T-7t4 @m26 T7t-4 L-2 @m29 L*T-7t4 T7t-4L-1 @m35 L*T-7t4 L-2 @m38 L* T-21t12 L-2 @m40 L* @m42 T7t-4 L-1 @m44 L* T-14t8 L-2 @m49 L*T-7t4 @m50 L-2
+
+MotiveStream: ! T-7 ! T14 ! T-1 +F5X [1:]! T-1 +E5X [1:]! T-10 +Bb3X [1:]! T-1 +A3X [1:]! T-3 +E3X [1:]! +D3X +Bb2X +C3Z +C2Z T-3 ! T2 ! I(A2, C5) ! @m23 T-1 @m24 ! @m25 T-1 @m26 I(Bb4, G4) ! +A2X T-16 [1:]! @m29 T11 +G#4 -B3 @m30 ! @m31 T2 @m32 ! @m33 T2 @m34 ! @m35 T1 +A4 -G#4 @m36 +D4Z +E4Z +F4Z +D4Z +E4Z +E3Z +A3X T-15 [1:]! T13 +Bb4X [1:]! T-7 ! T12 ! T-14 ! +F3X +G3X +A3Z +A2Z I(D3, D5) ! @m50 T-3 @m51 +A4 +F3X +D5 +G3X +F4 +A3Z +E4 +A2Z +D4 +D3(length = 6)
